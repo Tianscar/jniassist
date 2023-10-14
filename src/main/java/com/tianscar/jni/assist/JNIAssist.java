@@ -72,7 +72,7 @@ public final class JNIAssist {
         else if (type == byte.class) return "Byte";
         else if (type == char.class) return "Char";
         else if (type == short.class) return "Short";
-        else if (type == int.class) return "Integer";
+        else if (type == int.class) return "Int";
         else if (type == long.class) return "Long";
         else if (type == float.class) return "Float";
         else if (type == double.class) return "Double";
@@ -163,7 +163,9 @@ public final class JNIAssist {
                     out.append("\njmethodID methodID = (*env)->GetStaticMethodID(env, clazz, \"")
                             .append(method.getName()).append("\", \"")
                             .append(signature(method)).append("\");\nif (!methodID) goto detach;");
-                    out.append("\n(*env)->CallStatic").append(uppercase(method.getReturnType())).append("Method(env, clazz, methodID");
+                    out.append("\n");
+                    if (method.getReturnType() != void.class) out.append("return ");
+                    out.append("(*env)->CallStatic").append(uppercase(method.getReturnType())).append("Method(env, clazz, methodID");
                     if (parameters.length > 0) {
                         for (int i = 0; i < parameters.length; i ++) {
                             out.append(", (").append(typeMapping(parameters[i].getType())).append(") ").append(names[i] == null ? "arg" + i : names[i]);
