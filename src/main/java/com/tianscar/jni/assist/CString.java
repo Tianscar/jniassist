@@ -10,6 +10,7 @@ import java.lang.annotation.Target;
 public @interface CString {
 
     String value() default "";
-    String type() default "UTF";
+    String length() default "wcslen";
+    String cast() default "const wchar_t *";
 
 }

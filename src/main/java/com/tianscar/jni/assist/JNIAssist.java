@@ -163,7 +163,7 @@ public final class JNIAssist {
                             .append(method.getName()).append("\", \"")
                             .append(signature(method)).append("\");");
                     out.append("\n");
-                    if (method.getReturnType() != void.class) out.append(typeMapping(method.getReturnType())).append(" __result = ")
+                    if (method.getReturnType() != void.class) out.append(typeMapping(method.getReturnType())).append(" ret = ")
                             .append("(").append(typeMapping(method.getReturnType())).append(") ");
                     out.append("(*env)->CallStatic").append(uppercase(method.getReturnType())).append("Method(env, clazz, methodID");
                     if (parameters.length > 0) {
@@ -173,7 +173,7 @@ public final class JNIAssist {
                     }
                     out.append(");")
                             .append("\n(*jniassist_jvm)->DetachCurrentThread(jniassist_jvm);");
-                    if (method.getReturnType() != void.class) out.append("\nreturn __result;");
+                    if (method.getReturnType() != void.class) out.append("\nreturn ret;");
                     out.append("\n}\n");
 
                 }
@@ -241,30 +241,45 @@ public final class JNIAssist {
                                 out.append("const char *")
                                         .append(name)
                                         .append(" = ")
-                                        .append(string.type().equalsIgnoreCase("RAW") ?
+                                        .append(string.value().equalsIgnoreCase("RAW") ?
                                                 "(*env)->GetStringChars(env, " : "(*env)->GetStringUTFChars(env, ")
                                         .append(names[i])
                                         .append(", JNI_FALSE")
                                         .append(");\n");
                                 c_strings.add(name);
                                 java_strings.add(names[i]);
-                                stringTypes.add(string.type());
+                                stringTypes.add(string.value());
                                 names[i] = name;
                                 oneline = false;
                             }
                         }
 
+                        CString retString = method.getDeclaredAnnotation(CString.class);
+                        if (method.getReturnType() != String.class) retString = null;
+                        boolean retRawString = retString != null && retString.value().equalsIgnoreCase("RAW") && retString.length().length() > 0;
+                        if (retRawString) oneline = false;
+
                         if (oneline) {
                             if (method.getReturnType() == boolean.class) {
                                 out.append("return ");
+                            }
+                            else if (retString != null) {
+                                out.append("return (*env)->NewStringUTF(env, ");
                             }
                             else if (method.getReturnType() != void.class) {
                                 out.append("return ").append("(").append(typeMapping(method.getReturnType())).append(") ");
                             }
                         }
+                        else if (retRawString) {
+                            out.append("const jchar *raw_str = (const jchar *) ");
+                        }
                         else if (method.getReturnType() != void.class) {
                             String mapped = typeMapping(method.getReturnType());
-                            out.append(mapped).append(" __result = (").append(mapped).append(") ");
+                            out.append(mapped).append(" ret = ");
+                            if (retString != null) {
+                                out.append("(*env)->NewStringUTF(env, ");
+                            }
+                            else out.append("(").append(mapped).append(") ");
                         }
 
                         out.append(method.getName()).append("(");
@@ -272,7 +287,7 @@ public final class JNIAssist {
                         if (params.length > 0) {
                             if (casts[0] != null) out.append("(").append(casts[0]).append(") ");
                             out.append(names[0] == null ? "arg0" : names[0]);
-                            for (int i = 1; i < params.length; i++) {
+                            for (int i = 1; i < params.length; i ++) {
                                 out.append(", ");
                                 if (casts[i] != null) out.append("(").append(casts[i]).append(") ");
                                 out.append(names[i] == null ? "arg" + i : names[i]);
@@ -281,6 +296,15 @@ public final class JNIAssist {
 
                         if (method.getReturnType() == boolean.class) {
                             out.append(") ? JNI_TRUE : JNI_FALSE;");
+                        }
+                        else if (retRawString) {
+                            out.append(");\nreturn (*env)->NewString(env, raw_str, (jsize) ")
+                                    .append(retString.length()).append("(")
+                                    .append(retString.cast().length() < 1 ? "" : "(" + retString.cast() + ") ")
+                                    .append("raw_str));");
+                        }
+                        else if (retString != null) {
+                            out.append("));");
                         }
                         else out.append(");");
 
@@ -295,7 +319,7 @@ public final class JNIAssist {
                             }
                         }
 
-                        if (!oneline && method.getReturnType() != void.class) out.append("\nreturn __result;");
+                        if (!oneline && !retRawString && method.getReturnType() != void.class) out.append("\nreturn ret;");
 
                     } else if (field != null) {
 
