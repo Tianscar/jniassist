@@ -155,24 +155,26 @@ public final class JNIAssist {
                     }
                     out.append(")\n");
                     out.append("{\nJNIEnv *env = NULL;")
-                            .append("\n(*jniassist_jvm)->AttachCurrentThread(jniassist_jvm, (void **) &env, NULL);")
-                            .append("\nif (env)\n{");
+                            .append("\n(*jniassist_jvm)->AttachCurrentThread(jniassist_jvm, (void **) &env, NULL);");
                     out.append("\njclass clazz = (*env)->FindClass(env, \"")
                             .append(clazz.getName().replace(".", "/"))
-                            .append("\");\nif (!clazz) goto detach;");
+                            .append("\");");
                     out.append("\njmethodID methodID = (*env)->GetStaticMethodID(env, clazz, \"")
                             .append(method.getName()).append("\", \"")
-                            .append(signature(method)).append("\");\nif (!methodID) goto detach;");
+                            .append(signature(method)).append("\");");
                     out.append("\n");
-                    if (method.getReturnType() != void.class) out.append("return ");
+                    if (method.getReturnType() != void.class) out.append(typeMapping(method.getReturnType())).append(" __result = ")
+                            .append("(").append(typeMapping(method.getReturnType())).append(") ");
                     out.append("(*env)->CallStatic").append(uppercase(method.getReturnType())).append("Method(env, clazz, methodID");
                     if (parameters.length > 0) {
                         for (int i = 0; i < parameters.length; i ++) {
                             out.append(", (").append(typeMapping(parameters[i].getType())).append(") ").append(names[i] == null ? "arg" + i : names[i]);
                         }
                     }
-                    out.append(");\n}")
-                            .append("\ndetach:\n(*jniassist_jvm)->DetachCurrentThread(jniassist_jvm);\n}\n");
+                    out.append(");")
+                            .append("\n(*jniassist_jvm)->DetachCurrentThread(jniassist_jvm);");
+                    if (method.getReturnType() != void.class) out.append("\nreturn __result;");
+                    out.append("\n}\n");
 
                 }
             }
