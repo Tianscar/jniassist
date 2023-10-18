@@ -33,8 +33,8 @@ public final class JNIAssist {
         else if (type == float.class) return "jfloat";
         else if (type == double.class) return "jdouble";
         else if (type == String.class) return "jstring";
-        else if (type.isAssignableFrom(Throwable.class)) return "jthrowable";
-        else if (type.isAssignableFrom(Class.class)) return "jclass";
+        else if (Throwable.class.isAssignableFrom(type)) return "jthrowable";
+        else if (Class.class.isAssignableFrom(type)) return "jclass";
         else if (type.isArray()) {
             type = type.getComponentType();
             if (type == boolean.class) return "jbooleanArray";
